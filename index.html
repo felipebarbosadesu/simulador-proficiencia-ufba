@@ -274,17 +274,17 @@
         // ---------------------------------------------------------------------
         
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // COLOQUE AQUI AS CREDENCIAIS DO SEU PROJETO FIREBASE
+        // SUAS CREDENCIAIS DO FIREBASE ESTÃO AQUI
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         const firebaseConfig = {
-            apiKey: "AIzaSyB8YTYJpvjTe5hB7Nd6CZ3jZilC6v6oOPI",
-            authDomain: "exame-de-proeficiencia.firebaseapp.com",
-            projectId: "exame-de-proeficiencia",
-            storageBucket: "exame-de-proeficiencia.firebasestorage.app",
-            messagingSenderId: "186709009185",
-            appId: "1:186709009185:web:7c8937df128329aa375460",
-            measurementId: "G-BD1YRDDDV1"
-            };
+          apiKey: "AIzaSyB8YTYJpvjTe5hB7Nd6CZ3jZilC6v6oOPI",
+          authDomain: "exame-de-proeficiencia.firebaseapp.com",
+          projectId: "exame-de-proeficiencia",
+          storageBucket: "exame-de-proeficiencia.firebasestorage.app",
+          messagingSenderId: "186709009185",
+          appId: "1:186709009185:web:7c8937df128329aa375460",
+          measurementId: "G-BD1YRDDDV1"
+        };
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         // Inicializa o Firebase
@@ -330,7 +330,11 @@
         
         // Botões de Navegação
         document.getElementById('goToAluno').addEventListener('click', () => showView('alunoNameEntryScreen'));
-        document.getElementById('goToProfessor').addEventListener('click', () => showView('professorDashboardScreen'));
+        document.getElementById('goToProfessor').addEventListener('click', () => {
+            showView('professorDashboardScreen');
+            // Sempre que abrir o painel do professor, carrega os textos
+            loadAdminTexts(); 
+        });
         document.querySelectorAll('.go-home-btn').forEach(btn => {
             btn.addEventListener('click', () => showView('homeScreen'));
         });
@@ -358,18 +362,16 @@
         async function startTest() {
             showView('loadingScreen');
             
-            // Tenta usar o cache primeiro
-            if (allExamTexts.length < 4) {
-                try {
-                    const querySnapshot = await textsCollectionRef.get();
-                    allExamTexts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                } catch (err) {
-                    console.error("Erro ao buscar textos:", err);
-                    showView('alunoExamScreen');
-                    document.getElementById('examContent').style.display = 'none';
-                    document.getElementById('examError').style.display = 'block';
-                    return;
-                }
+            // Força a recarga do cache de textos
+            try {
+                const querySnapshot = await textsCollectionRef.get();
+                allExamTexts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (err) {
+                console.error("Erro ao buscar textos:", err);
+                showView('alunoExamScreen');
+                document.getElementById('examContent').style.display = 'none';
+                document.getElementById('examError').style.display = 'block';
+                return;
             }
             
             if (allExamTexts.length < 4) {
@@ -488,7 +490,7 @@
             if (timeRanOut) {
                 answer = 'TIMEOUT';
             } else if (selectedOption) {
-                answer = selectedOption.value;
+                answer = selectedCaminho.value;
             }
             userAnswers[currentQuestionIndex] = answer;
             
@@ -615,12 +617,11 @@
                 `;
             }
         }
-        initQuestionBlocks(); // Chamar na inicialização
         
         // Resetar e esconder formulário
         function resetTextForm() {
             addTextForm.reset();
-            textIdInput.value = '';
+            textIdInput.value = ''; // Limpa o ID
             document.getElementById('formTitle').textContent = 'Adicionar Novo Texto';
             document.getElementById('saveTextButton').textContent = 'Salvar';
             addTextForm.style.display = 'none';
@@ -628,7 +629,8 @@
         }
 
         showAddFormBtn.addEventListener('click', () => {
-            resetTextForm(); // Garante que está limpo
+            // CORREÇÃO: Força o reset do formulário ANTES de mostrar
+            resetTextForm(); 
             addTextForm.style.display = 'block';
             showAddFormBtn.style.display = 'none';
         });
@@ -637,7 +639,10 @@
         // Salvar (Criar ou Atualizar) Texto
         addTextForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const textId = textIdInput.value;
+            
+            // CORREÇÃO: Pega o ID do input escondido
+            const textId = textIdInput.value; 
+            
             let questions = [];
 
             for (let i = 0; i < 5; i++) {
@@ -659,129 +664,137 @@
                 text_content: document.getElementById('textContent').value,
                 questions: questions
             };
-            
-            document.getElementById('saveTextButton').textContent = 'Salvando...';
-            document.getElementById('saveTextButton').disabled = true;
+
+            const saveButton = document.getElementById('saveTextButton');
+            saveButton.textContent = 'Salvando...';
+            saveButton.disabled = true;
 
             try {
                 if (textId) {
+                    // Atualizar
                     await textsCollectionRef.doc(textId).update(textData);
                 } else {
+                    // Adicionar
                     await textsCollectionRef.add(textData);
                 }
                 resetTextForm();
                 loadAdminTexts(); // Recarrega a lista
             } catch (err) {
-                console.error("Erro ao salvar texto:", err);
-                alert("Erro ao salvar. Verifique o console.");
+                console.error("Erro ao salvar:", err);
+                alert("Erro ao salvar o texto. Tente novamente.");
             } finally {
-                document.getElementById('saveTextButton').textContent = 'Salvar';
-                document.getElementById('saveTextButton').disabled = false;
+                saveButton.textContent = 'Salvar';
+                saveButton.disabled = false;
             }
         });
 
-        // Carregar textos na lista do admin
+        // Carregar lista de textos
         async function loadAdminTexts() {
             textsListContainer.innerHTML = '<p>Carregando textos...</p>';
             try {
                 const querySnapshot = await textsCollectionRef.orderBy("title").get();
-                allExamTexts = []; // Limpa o cache para forçar recarga
+                allExamTexts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                if (querySnapshot.empty) {
+                textsListContainer.innerHTML = ''; // Limpa
+                if (allExamTexts.length === 0) {
                     textsListContainer.innerHTML = '<p>Nenhum texto cadastrado.</p>';
                     return;
                 }
                 
-                textsListContainer.innerHTML = '';
-                querySnapshot.forEach(doc => {
-                    const text = { id: doc.id, ...doc.data() };
-                    allExamTexts.push(text); // Atualiza o cache
-                    
-                    const snippet = (text.text_content || '').substring(0, 150) + '...';
+                allExamTexts.forEach(text => {
                     textsListContainer.innerHTML += `
-                        <div class="border rounded-lg p-4">
-                            <p class="font-bold text-lg text-gray-800">${text.title || 'Sem Título'}</p>
-                            <p class="text-gray-700 italic">${snippet}</p>
-                            <div class="mt-3 flex gap-2">
-                                <button data-id="${text.id}" class="edit-btn bg-blue-600 text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-blue-700">
+                        <div class="border rounded-lg p-4 flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-lg text-gray-800">${text.title}</h4>
+                                <p class="text-sm text-gray-600 italic mt-1">
+                                    ${(text.text_content || '').substring(0, 150)}...
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 flex gap-2 ml-4">
+                                <button class="edit-btn bg-blue-600 text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-blue-700" data-id="${text.id}">
                                     Editar
                                 </button>
-                                <button data-id="${text.id}" class="delete-btn bg-danger text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-red-700">
+                                <button class="delete-btn bg-red-600 text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-red-700" data-id="${text.id}">
                                     Excluir
                                 </button>
                             </div>
                         </div>
                     `;
                 });
-                
-                // Adiciona event listeners aos novos botões
-                document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', handleEditClick));
-                document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeleteClick));
-                
+
             } catch (err) {
-                console.error("Erro ao carregar textos:", err);
+                console.error(err);
                 textsListContainer.innerHTML = '<p class="text-danger">Erro ao carregar textos.</p>';
             }
         }
         
-        // Funções de Editar e Excluir
-        function handleEditClick(e) {
-            const id = e.target.dataset.id;
-            const text = allExamTexts.find(t => t.id === id);
-            if (!text) return;
+        // Listeners para botões de Editar e Excluir
+        textsListContainer.addEventListener('click', async (e) => {
+            const target = e.target;
+            const id = target.dataset.id;
             
-            resetTextForm();
-            addTextForm.style.display = 'block';
-            showAddFormBtn.style.display = 'none';
-            
-            document.getElementById('formTitle').textContent = 'Editar Texto';
-            textIdInput.value = id;
-            document.getElementById('textTitle').value = text.title || '';
-            document.getElementById('textContent').value = text.text_content || '';
-            
-            (text.questions || []).forEach((q, i) => {
-                document.getElementById(`q_text_${i}`).value = q.question;
-                (q.options || []).forEach((opt, oIdx) => {
-                     document.getElementById(`q_opt_${String.fromCharCode(65 + oIdx)}_${i}`).value = opt;
-                });
-                document.getElementById(`q_correct_${i}`).value = q.correct_option;
-            });
-            
-            window.scrollTo(0, 0); // Rola para o topo
-        }
+            if (!id) return;
 
-        async function handleDeleteClick(e) {
-            const id = e.target.dataset.id;
-            if (confirm("Tem certeza que deseja excluir este texto? Esta ação é irreversível.")) {
-                try {
-                    await textsCollectionRef.doc(id).delete();
-                    loadAdminTexts(); // Recarrega
-                } catch (err) {
-                    console.error("Erro ao excluir texto:", err);
+            // Botão Excluir
+            if (target.classList.contains('delete-btn')) {
+                if (confirm("Tem certeza que deseja excluir este texto?")) {
+                    try {
+                        await textsCollectionRef.doc(id).delete();
+                        loadAdminTexts(); // Recarrega
+                    } catch (err) {
+                        console.error("Erro ao excluir:", err);
+                        alert("Não foi possível excluir.");
+                    }
                 }
             }
-        }
-        
-        // --- Aba 2: Ver Resultados (Admin) ---
+            
+            // Botão Editar
+            if (target.classList.contains('edit-btn')) {
+                const textToEdit = allExamTexts.find(t => t.id === id);
+                if (textToEdit) {
+                    // Preenche o formulário
+                    textIdInput.value = textToEdit.id;
+                    document.getElementById('formTitle').textContent = 'Editar Texto';
+                    document.getElementById('textTitle').value = textToEdit.title;
+                    document.getElementById('textContent').value = textToEdit.text_content;
+
+                    (textToEdit.questions || []).forEach((q, i) => {
+                        document.getElementById(`q_text_${i}`).value = q.question || '';
+                        (q.options || []).forEach((opt, o) => {
+                            document.getElementById(`q_opt_${String.fromCharCode(65 + o)}_${i}`).value = opt || '';
+                        });
+                        document.getElementById(`q_correct_${i}`).value = q.correct_option || 'A';
+                    });
+                    
+                    // Mostra o formulário e esconde o botão "Add"
+                    addTextForm.style.display = 'block';
+                    showAddFormBtn.style.display = 'none';
+                }
+            }
+        });
+
+
+        // --- Aba 2: Resultados dos Alunos ---
         let allResultsData = []; // Cache para CSV
 
         async function loadAdminResults() {
             const tableBody = document.getElementById('allResultsTableBody');
             tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Carregando...</td></tr>';
-            allResultsData = [];
             
             try {
                 const querySnapshot = await resultsCollectionRef.orderBy("date", "desc").get();
-                if (querySnapshot.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Nenhum resultado.</td></tr>';
+                allResultsData = querySnapshot.docs.map(doc => doc.data());
+                
+                tableBody.innerHTML = ''; // Limpa
+                if (allResultsData.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Nenhum resultado encontrado.</td></tr>';
+                    document.getElementById('exportCsvButton').disabled = true;
                     return;
                 }
                 
-                tableBody.innerHTML = '';
-                querySnapshot.forEach(doc => {
-                    const result = doc.data();
-                    allResultsData.push(result); // Salva para o cache
-                    
+                document.getElementById('exportCsvButton').disabled = false;
+                
+                allResultsData.forEach(result => {
                     const date = result.date ? result.date.toDate().toLocaleString('pt-BR') : 'N/A';
                     const passed = result.score >= 7.0;
                     
@@ -789,7 +802,9 @@
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${result.student_name}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${passed ? 'text-secondary' : 'text-danger'}">${result.score.toFixed(1)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${passed ? 'text-green-600' : 'text-red-600'}">
+                                ${result.score.toFixed(1)}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${result.correct} / 20</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -799,12 +814,10 @@
                         </tr>
                     `;
                 });
-                
-                document.getElementById('exportCsvButton').disabled = false;
 
             } catch (err) {
-                console.error("Erro ao carregar resultados:", err);
-                tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-danger">Erro ao carregar.</td></tr>';
+                console.error(err);
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-danger">Erro ao carregar resultados.</td></tr>';
             }
         }
         
@@ -839,19 +852,24 @@
         // INICIALIZAÇÃO DA APLICAÇÃO
         // ---------------------------------------------------------------------
         
-        // Carrega os dados de textos (para o professor) e resultados (para o professor)
-        // A aba do aluno carrega os textos "on-demand" quando ele clica em "Começar"
-        function initApp() {
-            if (db) {
-                loadAdminTexts();
-                loadAdminResults();
-                showView('homeScreen'); // Começa na tela inicial
-            }
-        }
+        // Inicializa o formulário do professor (para popular os 5 blocos)
+        initQuestionBlocks();
         
-        // Adiciona um pequeno delay para garantir que o Firebase inicialize
-        setTimeout(initApp, 500);
-
+        // Esconde o loading e mostra a home (após o JS carregar)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verifica se as credenciais do Firebase foram inseridas
+            if (firebaseConfig.apiKey.startsWith("SUA_")) {
+                document.getElementById('loadingScreen').innerHTML = `
+                    <p class="text-danger font-bold text-lg p-8 text-center">
+                        ERRO DE CONFIGURAÇÃO!<br>
+                        Você precisa adicionar suas credenciais do Firebase no arquivo index.html (perto da linha 150).
+                    </p>
+                `;
+            } else {
+                showView('homeScreen');
+            }
+        });
+        
     </script>
 </body>
 </html>
