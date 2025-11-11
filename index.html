@@ -11,6 +11,9 @@
     <!-- Firebase (Versão 9 COMPAT - Mais fácil para HTML) -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <!-- BANCO DE DADOS LOCAL (NOVO) -->
+    <script src="banco-de-dados.js" defer></script>
     
     <!-- Estilos Customizados -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -51,14 +54,6 @@
             animation: spin 1s linear infinite;
         }
         
-        /* Estilos para o formulário de admin */
-        .question-block {
-            border: 1px solid #ccc;
-            padding: 1rem;
-            margin-top: 1rem;
-            border-radius: 8px;
-            background-color: #fafafa;
-        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -92,7 +87,7 @@
                     👨‍🎓 Sou Aluno
                 </button>
                 <button id="goToProfessor" class="w-full sm:w-auto bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-gray-800 transition-colors">
-                    👩‍🏫 Sou Professor
+                    👩‍🏫 Sou Professor (Ver Notas)
                 </button>
             </div>
         </section>
@@ -177,7 +172,7 @@
             </button>
         </section>
 
-        <!-- 6. PAINEL DO PROFESSOR -->
+        <!-- 6. PAINEL DO PROFESSOR (SOMENTE RESULTADOS) -->
         <section id="professorDashboardScreen" class="page-section bg-white p-6 sm:p-8 rounded-lg shadow-xl">
             <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <h2 class="text-3xl font-bold text-primary">Painel do Professor</h2>
@@ -186,61 +181,12 @@
                 </button>
             </div>
 
-            <!-- Abas -->
-            <div class="flex border-b mb-6">
-                <button id="tabButtonTextos" class="tab-btn py-2 px-4 font-semibold border-b-2 border-blue-600 text-blue-600">
-                    Banco de Textos
-                </button>
-                <button id="tabButtonResultados" class="tab-btn py-2 px-4 font-semibold text-gray-500">
-                    Resultados dos Alunos
-                </button>
-            </div>
-
+            <!-- Abas (REMOVIDO - SÓ HÁ UMA ABA) -->
             <!-- Conteúdo das Abas -->
             <div>
-                <!-- Aba 1: Banco de Textos -->
-                <div id="tabContentTextos" class="tab-content">
-                    <button id="showAddFormBtn" class="mb-6 bg-secondary text-white font-bold py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors">
-                        Adicionar Novo Texto
-                    </button>
-                    
-                    <!-- Formulário (escondido por padrão) -->
-                    <form id="addTextForm" class="hidden space-y-6 mb-8 border p-6 rounded-lg">
-                        <h3 id="formTitle" class="text-2xl font-semibold text-primary">Adicionar Novo Texto</h3>
-                        <input type="hidden" id="textId">
-                        
-                        <div>
-                            <label for="textTitle" class="block text-sm font-medium text-gray-700">Título</label>
-                            <input type="text" id="textTitle" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                        </div>
-                        <div>
-                            <label for="textContent" class="block text-sm font-medium text-gray-700">Conteúdo do Texto</label>
-                            <textarea id="textContent" rows="10" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea>
-                        </div>
-
-                        <!-- Gerador de Questões -->
-                        <div id="questionsContainer" class="space-y-4">
-                            <!-- JS vai popular 5 blocos aqui -->
-                        </div>
-                        
-                        <div class="flex justify-end gap-4">
-                            <button type="button" id="cancelEditButton" class="bg-gray-500 text-white py-2 px-4 rounded-md font-semibold hover:bg-gray-600">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="saveTextButton" class="bg-secondary text-white py-2 px-4 rounded-md font-semibold hover:bg-opacity-90">
-                                Salvar
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Lista de Textos -->
-                    <div id="textsListContainer" class="space-y-4">
-                        <p>Carregando textos...</p>
-                    </div>
-                </div>
-                
-                <!-- Aba 2: Resultados -->
-                <div id="tabContentResultados" class="tab-content" style="display: none;">
+                <!-- Aba de Resultados (ÚNICA) -->
+                <div id="tabContentResultados" class="tab-content">
+                    <h3 class="text-2xl font-semibold text-primary mb-4">Resultados dos Alunos</h3>
                     <button id="exportCsvButton" class="mb-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50">
                         Exportar CSV
                     </button>
@@ -298,8 +244,8 @@
             document.getElementById('loadingScreen').innerHTML = '<p class="text-danger font-bold text-lg">Erro: Verifique as credenciais do Firebase no código HTML.</p>';
         }
 
-        // Coleções do Firestore
-        const textsCollectionRef = db.collection("texts");
+        // Coleções do Firestore (AGORA SÓ USAMOS A 'RESULTS')
+        // const textsCollectionRef = db.collection("texts"); // Não é mais usado
         const resultsCollectionRef = db.collection("results");
 
         // ---------------------------------------------------------------------
@@ -307,7 +253,7 @@
         // ---------------------------------------------------------------------
 
         let currentStudentName = null;
-        let allExamTexts = []; // Cache dos textos
+        let allExamTexts = []; // Cache dos textos (agora vem do .js)
         let currentTest = [];
         let currentQuestionIndex = 0;
         let userAnswers = [];
@@ -332,8 +278,7 @@
         document.getElementById('goToAluno').addEventListener('click', () => showView('alunoNameEntryScreen'));
         document.getElementById('goToProfessor').addEventListener('click', () => {
             showView('professorDashboardScreen');
-            // Sempre que abrir o painel do professor, carrega os textos
-            loadAdminTexts(); 
+            loadAdminResults(); // Carrega os resultados ao entrar
         });
         document.querySelectorAll('.go-home-btn').forEach(btn => {
             btn.addEventListener('click', () => showView('homeScreen'));
@@ -358,22 +303,25 @@
             startTest();
         });
 
-        // 2. Iniciar o Simulado
+        // 2. Iniciar o Simulado (MODIFICADO)
         async function startTest() {
             showView('loadingScreen');
             
-            // Força a recarga do cache de textos
-            try {
-                const querySnapshot = await textsCollectionRef.get();
-                allExamTexts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (err) {
-                console.error("Erro ao buscar textos:", err);
+            // **** LÓGICA ATUALIZADA ****
+            // Verifica se o banco de dados local (banco-de-dados.js) foi carregado
+            if (typeof LOCAL_TEXT_DATABASE === 'undefined' || LOCAL_TEXT_DATABASE.length < 4) {
+                console.error("Banco de dados local (banco-de-dados.js) não foi carregado ou tem menos de 4 textos.");
                 showView('alunoExamScreen');
                 document.getElementById('examContent').style.display = 'none';
                 document.getElementById('examError').style.display = 'block';
+                document.getElementById('examError').querySelector('p').textContent = 'Erro ao carregar o banco de textos. Contate o administrador.';
                 return;
             }
             
+            // Define allExamTexts a partir da variável global
+            allExamTexts = LOCAL_TEXT_DATABASE;
+            // **** FIM DA LÓGICA ATUALIZADA ****
+
             if (allExamTexts.length < 4) {
                 console.error("Textos insuficientes no DB");
                 showView('alunoExamScreen');
@@ -393,7 +341,7 @@
                 (text.questions || []).forEach((q) => { // Garante que questions existe
                     currentTest.push({
                         ...q,
-                        textId: text.id,
+                        textId: text.id, // ID não existe mais, mas mantemos a estrutura
                         textContent: text.text_content,
                         textTitle: `TEXTO ${textIndex + 1}: ${text.title || ''}`
                     });
@@ -490,7 +438,7 @@
             if (timeRanOut) {
                 answer = 'TIMEOUT';
             } else if (selectedOption) {
-                answer = selectedCaminho.value;
+                answer = selectedOption.value;
             }
             userAnswers[currentQuestionIndex] = answer;
             
@@ -556,225 +504,9 @@
         }
 
         // ---------------------------------------------------------------------
-        // LÓGICA DO PROFESSOR
+        // LÓGICA DO PROFESSOR (SOMENTE RESULTADOS)
         // ---------------------------------------------------------------------
 
-        // Navegação por Abas
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Estilos dos botões
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('border-blue-600', 'text-blue-600');
-                    btn.classList.add('text-gray-500');
-                });
-                button.classList.add('border-blue-600', 'text-blue-600');
-                button.classList.remove('text-gray-500');
-                
-                // Mostrar conteúdo
-                const targetId = button.id.replace('Button', 'Content');
-                tabContents.forEach(content => {
-                    content.style.display = (content.id === targetId) ? 'block' : 'none';
-                });
-                
-                // Carregar dados da aba
-                if (targetId === 'tabContentTextos') loadAdminTexts();
-                if (targetId === 'tabContentResultados') loadAdminResults();
-            });
-        });
-
-        // --- Aba 1: Gerenciar Textos ---
-        const addTextForm = document.getElementById('addTextForm');
-        const showAddFormBtn = document.getElementById('showAddFormBtn');
-        const cancelEditButton = document.getElementById('cancelEditButton');
-        const textsListContainer = document.getElementById('textsListContainer');
-        const textIdInput = document.getElementById('textId');
-        
-        // Gera os 5 blocos de questão no formulário
-        function initQuestionBlocks() {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-            for (let i = 0; i < 5; i++) {
-                container.innerHTML += `
-                    <div class="question-block">
-                        <h4 class="font-semibold">Questão ${i + 1}</h4>
-                        <input type="text" id="q_text_${i}" placeholder="Texto da Pergunta" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <input type="text" id="q_opt_A_${i}" placeholder="Opção A" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <input type="text" id="q_opt_B_${i}" placeholder="Opção B" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <input type="text" id="q_opt_C_${i}" placeholder="Opção C" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <input type="text" id="q_opt_D_${i}" placeholder="Opção D" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <input type="text" id="q_opt_E_${i}" placeholder="Opção E" required class="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                        <select id="q_correct_${i}" required class="mt-2 block w-full px-2 py-1 border border-gray-300 rounded-md">
-                            <option value="A">Resposta Correta: A</option>
-                            <option value="B">Resposta Correta: B</option>
-                            <option value="C">Resposta Correta: C</option>
-                            <option value="D">Resposta Correta: D</option>
-                            <option value="E">Resposta Correta: E</option>
-                        </select>
-                    </div>
-                `;
-            }
-        }
-        
-        // Resetar e esconder formulário
-        function resetTextForm() {
-            addTextForm.reset();
-            textIdInput.value = ''; // Limpa o ID
-            document.getElementById('formTitle').textContent = 'Adicionar Novo Texto';
-            document.getElementById('saveTextButton').textContent = 'Salvar';
-            addTextForm.style.display = 'none';
-            showAddFormBtn.style.display = 'block';
-        }
-
-        showAddFormBtn.addEventListener('click', () => {
-            // CORREÇÃO: Força o reset do formulário ANTES de mostrar
-            resetTextForm(); 
-            addTextForm.style.display = 'block';
-            showAddFormBtn.style.display = 'none';
-        });
-        cancelEditButton.addEventListener('click', resetTextForm);
-
-        // Salvar (Criar ou Atualizar) Texto
-        addTextForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // CORREÇÃO: Pega o ID do input escondido
-            const textId = textIdInput.value; 
-            
-            let questions = [];
-
-            for (let i = 0; i < 5; i++) {
-                questions.push({
-                    question: document.getElementById(`q_text_${i}`).value,
-                    options: [
-                        document.getElementById(`q_opt_A_${i}`).value,
-                        document.getElementById(`q_opt_B_${i}`).value,
-                        document.getElementById(`q_opt_C_${i}`).value,
-                        document.getElementById(`q_opt_D_${i}`).value,
-                        document.getElementById(`q_opt_E_${i}`).value,
-                    ],
-                    correct_option: document.getElementById(`q_correct_${i}`).value
-                });
-            }
-            
-            const textData = {
-                title: document.getElementById('textTitle').value,
-                text_content: document.getElementById('textContent').value,
-                questions: questions
-            };
-
-            const saveButton = document.getElementById('saveTextButton');
-            saveButton.textContent = 'Salvando...';
-            saveButton.disabled = true;
-
-            try {
-                if (textId) {
-                    // Atualizar
-                    await textsCollectionRef.doc(textId).update(textData);
-                } else {
-                    // Adicionar
-                    await textsCollectionRef.add(textData);
-                }
-                resetTextForm();
-                loadAdminTexts(); // Recarrega a lista
-            } catch (err) {
-                console.error("Erro ao salvar:", err);
-                alert("Erro ao salvar o texto. Tente novamente.");
-            } finally {
-                saveButton.textContent = 'Salvar';
-                saveButton.disabled = false;
-            }
-        });
-
-        // Carregar lista de textos
-        async function loadAdminTexts() {
-            textsListContainer.innerHTML = '<p>Carregando textos...</p>';
-            try {
-                const querySnapshot = await textsCollectionRef.orderBy("title").get();
-                allExamTexts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                textsListContainer.innerHTML = ''; // Limpa
-                if (allExamTexts.length === 0) {
-                    textsListContainer.innerHTML = '<p>Nenhum texto cadastrado.</p>';
-                    return;
-                }
-                
-                allExamTexts.forEach(text => {
-                    textsListContainer.innerHTML += `
-                        <div class="border rounded-lg p-4 flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-lg text-gray-800">${text.title}</h4>
-                                <p class="text-sm text-gray-600 italic mt-1">
-                                    ${(text.text_content || '').substring(0, 150)}...
-                                </p>
-                            </div>
-                            <div class="flex-shrink-0 flex gap-2 ml-4">
-                                <button class="edit-btn bg-blue-600 text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-blue-700" data-id="${text.id}">
-                                    Editar
-                                </button>
-                                <button class="delete-btn bg-red-600 text-white text-sm font-medium py-1 px-3 rounded-md hover:bg-red-700" data-id="${text.id}">
-                                    Excluir
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-
-            } catch (err) {
-                console.error(err);
-                textsListContainer.innerHTML = '<p class="text-danger">Erro ao carregar textos.</p>';
-            }
-        }
-        
-        // Listeners para botões de Editar e Excluir
-        textsListContainer.addEventListener('click', async (e) => {
-            const target = e.target;
-            const id = target.dataset.id;
-            
-            if (!id) return;
-
-            // Botão Excluir
-            if (target.classList.contains('delete-btn')) {
-                if (confirm("Tem certeza que deseja excluir este texto?")) {
-                    try {
-                        await textsCollectionRef.doc(id).delete();
-                        loadAdminTexts(); // Recarrega
-                    } catch (err) {
-                        console.error("Erro ao excluir:", err);
-                        alert("Não foi possível excluir.");
-                    }
-                }
-            }
-            
-            // Botão Editar
-            if (target.classList.contains('edit-btn')) {
-                const textToEdit = allExamTexts.find(t => t.id === id);
-                if (textToEdit) {
-                    // Preenche o formulário
-                    textIdInput.value = textToEdit.id;
-                    document.getElementById('formTitle').textContent = 'Editar Texto';
-                    document.getElementById('textTitle').value = textToEdit.title;
-                    document.getElementById('textContent').value = textToEdit.text_content;
-
-                    (textToEdit.questions || []).forEach((q, i) => {
-                        document.getElementById(`q_text_${i}`).value = q.question || '';
-                        (q.options || []).forEach((opt, o) => {
-                            document.getElementById(`q_opt_${String.fromCharCode(65 + o)}_${i}`).value = opt || '';
-                        });
-                        document.getElementById(`q_correct_${i}`).value = q.correct_option || 'A';
-                    });
-                    
-                    // Mostra o formulário e esconde o botão "Add"
-                    addTextForm.style.display = 'block';
-                    showAddFormBtn.style.display = 'none';
-                }
-            }
-        });
-
-
-        // --- Aba 2: Resultados dos Alunos ---
         let allResultsData = []; // Cache para CSV
 
         async function loadAdminResults() {
@@ -851,9 +583,6 @@
         // ---------------------------------------------------------------------
         // INICIALIZAÇÃO DA APLICAÇÃO
         // ---------------------------------------------------------------------
-        
-        // Inicializa o formulário do professor (para popular os 5 blocos)
-        initQuestionBlocks();
         
         // Esconde o loading e mostra a home (após o JS carregar)
         document.addEventListener('DOMContentLoaded', () => {
